@@ -4,7 +4,7 @@ class Connection:
     def __init__(self, name):
         self.name = None
         self.databaseName = None
-        self.databaseSchema = None
+        self.schemaName = None
         self.connection = None
         self.getConnectionFromAPI(name)
 
@@ -16,12 +16,18 @@ class Connection:
             self.name = connection.name        
 
         if connection.database:
-            self.database = connection.database
+            self.databaseName = connection.database
 
         if connection.schema:
-            self.schema = connection.schema
+            self.schemaName = connection.schema
 
         self.connection = connection
+
+    def getDatabaseName(self):
+        return self.databaseName
+
+    def getSchemaName(self):
+        return self.schemaName
 
     def __str__(self):
         return """
@@ -30,4 +36,7 @@ class Connection:
             Database:           {database}
             Schema:             {schema}
             ConnectionObj:      {connection}
-            """.format(name = self.name, database = self.database, schema = self.schema, connection = self.connection)
+            """.format(name = self.name, database = self.databaseName, schema = self.schemaName, connection = self.connection)
+
+
+

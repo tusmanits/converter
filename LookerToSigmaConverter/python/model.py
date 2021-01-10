@@ -1,39 +1,64 @@
 import lkml
 from connection import Connection
- 
+from logger import Logger
+from view import View
+
+
 class Model:
     def __init__(self):
-        self.name = ''
-        self.connection = ''
-        self.is_derived_table = False
-        self.is_native_derived_table = False
-        self.persist_for = ''
-        self.sql_trigger_name = ''
+        self.name = None
+        self.connectionName = None
+        self.connection = None
+        self.label = None
 
-    def setView(self, view):
+    def setModel(self, model):
 
-        if 'derived_table' in view:
-            self.is_derived_table = True
+        if 'label' in model:
+            self.label = model['label']
+            self.name = "SIGMA_" + self.label.replace(' ', '_')
 
-            if 'sql' in view['derived_table']:
-                self.sql = view['derived_table']['sql']
+        if 'includes' in model:
+            self.includes = model['includes']
 
-            if 'persist_for' in view['derived_table']:
-                self.persist_for = view['derived_table']['persist_for']
+        if 'connection' in model:
+            self.connectionName = model['connection']
 
-        if 'name' in view:
-            self.name = view['name']
+            self.connection = Connection(self.connectionName)
 
     def __str__(self):
         return """
-            View: ---------------------------------------------------------------------------------------------------------------
-            View Name:            {name}
-            Is Derived Table:     {is_derived_table}
-            Presist For:          {persist_for}
-            SQL:                  {sql}
-            """.format(name = self.name, is_derived_table = self.is_derived_table, sql = self.sql, persist_for = self.persist_for)
+            Model: ---------------------------------------------------------------------------------------------------------------
+            Label:                  {label}
+            Name:                   {name}
+            Connection Name:        {connectionName}
+            Database Name:          {databaseName}
+            SchemaName:             {schemaName}
+            """.format(label = self.label, connectionName = self.connectionName, databaseName = self.connection.getDatabaseName(), schemaName = self.connection.getSchemaName(), name = self.name)
+
+logging = Logger().getLogger()
+
+with open('../data/its_sig/its_sig.model.lkml', 'r') as file:
+    parsed = lkml.load(file)
+    #logging.info(parsed)
+
+    model = Model()
+    model.setModel(parsed)
+    logging.info(model)
 
 
+    viewFile = '../data/its_sig/repeat_purchase_fact.view.lkml'
 
-con = Connection('its_warehouse')
-print(con)
+    viewObj = View()
+    views = viewObj.getViewInfomationFromFile(viewFile)
+
+    for view in views:
+        logging.info(view)
+
+        logging.info(view.getViewSQL())
+
+        view.schemaName = model.connection.schemaName
+        view.databaseName = model.connection.databaseName
+        view.targetSchema = model.name
+
+        view.writedbtModel()
+
