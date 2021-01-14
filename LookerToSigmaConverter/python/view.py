@@ -75,7 +75,93 @@ class View:
         return views
 
 
+
     def writedbtModel(self):
+
+        fileName = self.name.lower().strip() + '.sql'
+
+        filePath = "../models/" + fileName
+
+        dbtrunModelsPath = "run_models.sh" 
+        dbtrunPresistedModelsPath = "run_presisted_models.sh"
+
+        sql = self.getViewSQL()
+
+        content = """
+
+        {{ config(materialized = "ephemeral") }}
+
+        {{ config(schema = "SIGMA_ITS_SIG") }}
+                
+        {%- set presist_query_sql-%}
+        SELECT 0  
+        {%- endset-%}
+
+        {%- set presist_result = run_query(presist_query_sql)-%}
+
+        {%- if execute -%}
+
+        {%- set result = presist_result.columns[0].values()|first -%}
+
+        {%- if result|int != 1 %}
+
+        {%- set execute_var -%}
+        Executing Model :  {{ this }} {{ result }} Added Result
+
+        {%- endset-%}
+
+
+        {%- set sql%}
+
+        CREATE OR REPLACE TABLE @@SCHEMANAME@@.@@TABLENAME@@
+        AS
+        @@SELECT_QUERY@@ 
+
+        {%- endset -%}
+
+        {%- do run_query(sql)-%}
+
+        {{ log( execute_var , info = True) }}
+
+        {%- else -%}
+
+        {%- set skip_var -%}
+        Skip Model :  {{ this }} {{ result }} Added Result
+
+        {%- endset -%}
+
+        {{ log( skip_var , info = True) }}
+        
+        {%- endif -%}
+        
+        {%- else -%}
+
+        {%- set execute_var -%}
+        Executing Model :  {{ this }} Added Result
+        {%- endset -%}
+
+        {{ log( execute_var , info = True) }}        
+        
+        {%- endif -%}
+
+        """.replace("@@SCHEMANAME@@",self.targetSchema).replace("@@TABLENAME@@", self.name.lower().strip()).replace("@@SELECT_QUERY@@", sql)
+
+        with open(filePath, 'w') as file:
+            file.write(content)
+
+        if self.materialized == 'table':
+            content = 'dbt run --models {}\n'.format(self.name.lower().strip())
+            with open(dbtrunPresistedModelsPath, 'a') as file:
+                file.write(content)
+
+        content = 'dbt run --models {}\n'.format(self.name.lower().strip())
+        with open(dbtrunModelsPath, 'a') as file:
+            file.write(content)
+
+
+
+
+    def writedbtModel1(self):
 
         fileName = self.name.lower().strip() + '.sql'
 

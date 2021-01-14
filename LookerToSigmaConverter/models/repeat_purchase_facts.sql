@@ -1,67 +1,61 @@
+-- depends on: {{ ref('rp') }}
 
-        {{ config(materialized = "table") }}
+        {{ config(materialized = "ephemeral") }}
 
         {{ config(schema = "SIGMA_ITS_SIG") }}
+                
+        {%- set presist_query_sql-%}
+        SELECT 0  
+        {%- endset-%}
 
+        {%- set presist_result = run_query(presist_query_sql)-%}
+
+        {%- if execute -%}
+
+        {%- set result = presist_result.columns[0].values()|first -%}
+
+        {%- if result|int != 1 %}
+
+        {%- set execute_var -%}
+        Executing Model :  {{ this }} {{ result }} Added Result
+
+        {%- endset-%}
+
+        {%- set sql%}
+
+        CREATE OR REPLACE TABLE SIGMA_ITS_SIG.RP
+
+        AS
+
+        {{ ref('rp') }}             
+
+        {%- endset -%}
+
+        {%- do run_query(sql)-%}
+
+        {{ log( execute_var , info = True) }}
+
+        {%- else -%}
+
+        {%- set skip_var -%}
+        Skip Model :  {{ this }} {{ result }} Added Result
+
+        {%- endset -%}
+
+        {{ log( skip_var , info = True) }}
         
-            SELECT
-            ORDER_ID,
-NEXT_ORDER_ID,
-(CASE 
-            WHEN NOT 
-        (CASE 
-            WHEN NOT 
-        (CASE 
-            WHEN NOT 
-        (CASE 
-            WHEN number_subsequent_orders >= 1 AND number_subsequent_orders <= 10 THEN TRUE 
-            ELSE FALSE 
-        END) AND number_subsequent_orders <= 20 THEN TRUE 
-            ELSE FALSE 
-        END) AND number_subsequent_orders <= 30 THEN TRUE 
-            ELSE FALSE 
-        END) AND number_subsequent_orders <= 30 THEN TRUE 
-            ELSE FALSE 
-        END) AS LESS_THAN_40,
-(CASE 
-            WHEN next_order_id > 0 THEN TRUE 
-            ELSE FALSE 
-        END) AS HAS_SUBSEQUENT_ORDER,
-(CASE 
-            WHEN number_subsequent_orders >= 1 AND number_subsequent_orders <= 10 THEN TRUE 
-            ELSE FALSE 
-        END) AS LESS_THAN_10,
-(CASE 
-            WHEN NOT 
-        (CASE 
-            WHEN number_subsequent_orders >= 1 AND number_subsequent_orders <= 10 THEN TRUE 
-            ELSE FALSE 
-        END) AND number_subsequent_orders <= 20 THEN TRUE 
-            ELSE FALSE 
-        END) AS LESS_THAN_20,
-(CASE 
-            WHEN NOT 
-        (CASE 
-            WHEN NOT 
-        (CASE 
-            WHEN number_subsequent_orders >= 1 AND number_subsequent_orders <= 10 THEN TRUE 
-            ELSE FALSE 
-        END) AND number_subsequent_orders <= 20 THEN TRUE 
-            ELSE FALSE 
-        END) AND number_subsequent_orders <= 30 THEN TRUE 
-            ELSE FALSE 
-        END) AS LESS_THAN_30,
-NUMBER_SUBSEQUENT_ORDERS
-            FROM (SELECT
-        order_items.order_id
-        , COUNT(DISTINCT repeat_order_items.id) AS number_subsequent_orders
-        , MIN(repeat_order_items.created_at) AS next_order_date
-        , MIN(repeat_order_items.order_id) AS next_order_id
-      FROM order_items
-      LEFT JOIN order_items repeat_order_items
-        ON order_items.user_id = repeat_order_items.user_id
-        AND order_items.created_at < repeat_order_items.created_at
-      GROUP BY 1)
-            
+        {%- endif -%}
+        
+        {%- else -%}
+
+        {%- set execute_var -%}
+        Executing Model :  {{ this }} Added Result
+        {%- endset -%}
+
+        {{ log( execute_var , info = True) }}        
+        
+        {%- endif -%}
+
+
 
         
