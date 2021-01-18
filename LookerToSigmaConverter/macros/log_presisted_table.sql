@@ -123,39 +123,10 @@
 
 {% endmacro %}
 
-
-{% macro log_persisted_event_started(persisted_type, persisted_sql, alias) %}
-    {{  log_persisted_event
-        (
-            persisted_type = persisted_type,
-            persisted_user=target.user,
-            persisted_target=target.name,
-            persisted_is_full_refresh=flags.FULL_REFRESH,
-            persisted_model = this.name,
-            persisted_relation = this.name,
-            persisted_schema = this.schema,
-            last_loaded_persisted_value =  None,
-            persisted_status =  "STARTED",
-            persisted_sql =  persisted_sql
-        )
-    }}  
-{% endmacro %}
-
 {% macro log_persisted_event_completed(persisted_type, persisted_sql) %}
-    {{  log_persisted_event
-        (
-            persisted_type = persisted_type,
-            persisted_user=target.user,
-            persisted_target=target.name,
-            persisted_is_full_refresh=flags.FULL_REFRESH,
-            persisted_model = this.name,
-            persisted_relation = this.name,
-            persisted_schema = this.schema,
-            last_loaded_persisted_value =  None,
-            persisted_status =  "COMPLETED",
-            persisted_sql =  persisted_sql
-        )
-    }}  
+    
+    {%- set loaded_entry = log_persisted_load(persisted_type, persisted_sql) -%}
+
 {% endmacro %}
 
 
@@ -171,7 +142,7 @@
             persisted_relation = this.name,
             persisted_schema = this.schema,
             last_loaded_persisted_value =  None,
-            persisted_status =  "TRANSITION",
+            persisted_status =  "STARTED",
             persisted_transition_status = persisted_transition_status,
             persisted_sql =  persisted_sql
         ) 
@@ -185,8 +156,8 @@
 
 {% endmacro %}
 
-{% macro log_persisted_event_loaded(persisted_type, persisted_sql, last_loaded_persisted_value) %}
-    
+{% macro log_persisted_event_loaded(persisted_type, persisted_sql, last_loaded_persisted_value, status) %}
+
     {%- set sql = log_persisted_event
     (
         persisted_type = persisted_type,
@@ -197,13 +168,11 @@
         persisted_relation = this.name,
         persisted_schema = this.schema,
         last_loaded_persisted_value =  last_loaded_persisted_value,
-        persisted_status =  "LOADED",
-        persisted_transition_status = None,
+        persisted_status =  "COMPLETED",
+        persisted_transition_status = status,
         persisted_sql =  persisted_sql
     ) 
     -%}
-
-    {{log(sql, info = True)}}
 
     {%- call statement('insert', fetch_result=False) -%}
 
@@ -227,7 +196,7 @@
         LOWER(PERSISTED_MODEL) = LOWER('{{ model_name }}') 
     AND LOWER(PERSISTED_SCHEMA) = LOWER('{{ model_schema }}') 
     AND LOWER(PERSISTED_TYPE) = lower('{{persisted_type}}')
-    AND LOWER(PERSISTED_STATUS) = LOWER('TRANSITION')
+    AND LOWER(PERSISTED_STATUS) = LOWER('STARTED')
     ORDER BY PERSISTED_TIMESTAMP DESC
     LIMIT 1
     {%- endset -%}
@@ -254,7 +223,11 @@
 
         {%- set last_persisted_value = get_sql_value(valueQuery) -%}
 
-        {%- set insert_loaded_value = log_persisted_event_loaded(persisted_type, persisted_sql, last_persisted_value) -%}
+        {%- set insert_loaded_value = log_persisted_event_loaded(persisted_type, persisted_sql, last_persisted_value, 'LOADED') -%}
+
+    {%- else -%}
+
+        {%- set insert_loaded_value = log_persisted_event_loaded(persisted_type, persisted_sql, None, 'SKIPPED') -%}
 
     {%- endif-%}
       
@@ -274,7 +247,7 @@
         LOWER(PERSISTED_MODEL) = LOWER('{{ model_name }}') 
     AND LOWER(PERSISTED_SCHEMA) = LOWER('{{ model_schema }}') 
     AND LOWER(PERSISTED_TYPE) = lower('{{persisted_type}}')
-    AND LOWER(PERSISTED_STATUS) = LOWER('TRANSITION')
+    AND LOWER(PERSISTED_STATUS) = LOWER('STARTED')
     ORDER BY PERSISTED_TIMESTAMP DESC
     LIMIT 1
     {%- endset -%}
@@ -290,8 +263,10 @@
 
         {%- set last_persisted_value = get_sql_value(last_persisted_value_query) -%}
 
-        {%- set insert_loaded_value = log_persisted_event_loaded(persisted_type, persisted_sql, last_persisted_value) -%}
+        {%- set insert_loaded_value = log_persisted_event_loaded(persisted_type, persisted_sql, last_persisted_value, 'LOADED') -%}
 
+    {%- else -%}
+        {%- set insert_loaded_value = log_persisted_event_loaded(persisted_type, persisted_sql, None, 'SKIPPED') -%}
     {%- endif-%}
       
 {% endmacro %}
@@ -309,7 +284,6 @@
     {%- endif -%}  
 {% endmacro %}
 
-
 {% macro get_status_value(value) %}
         {% if value == "true"%}
         {{ return("SKIPPED") }}
@@ -318,31 +292,78 @@
         {%- endif -%}
 {% endmacro %}
 
-
----This need to be removed
-
-{% macro log_persisted_load1(persisted_type, status, last_loaded_persisted_value) %}
-
-    {%- if status == "LOADED" -%}
+{% macro get_persisted_regenration_flag(persisted_type, persisted_sql) %}
     
-    {%- if persisted_type == 'PERSIST_FOR'-%}
+    {{return (get_persisted_flag_for_persist_for(persisted_type,  persisted_sql))}}
 
-    {%- set utc_query = dbt_utils.current_timestamp_in_utc() -%}
+{% endmacro %}
+
+{% macro get_persisted_flag_for_persist_for(persisted_type, persisted_sql) %}
+
+    {%- set log_table = get_persisted_relation() -%}
+
+    {% set model_name = this.name %}
+    {% set model_schema = this.schema %}
+
+    {% set split_list = persisted_sql.split(' ') %}
     
-    {%- set valueQuery -%}
-    SELECT CAST({{ utc_query }} AS VARCHAR(512)) AS COLUMN_    
+    {% set interval = split_list[0] %}
+    {% set date_part = split_list[1] %}
+
+    {%- set date_part1 -%}
+    '{{ date_part }}'
     {%- endset -%}
 
-    {%- set value = get_sql_value(valueQuery) -%}
+    {%- set sql -%}
+    SELECT UPPER(LAST_LOADED_PERSISTED_VALUE) AS COLUMN_ from {{ log_table }}
+    WHERE 
+        LOWER(PERSISTED_MODEL) = LOWER('{{ model_name }}') 
+    AND LOWER(PERSISTED_SCHEMA) = LOWER('{{ model_schema }}') 
+    AND LOWER(PERSISTED_TYPE) = lower('{{persisted_type}}')
+    AND LOWER(PERSISTED_STATUS) = LOWER('COMPLETED')
+    AND LOWER(PERSISTED_TRANSITION_STATUS) = LOWER('LOADED')
+    ORDER BY PERSISTED_TIMESTAMP DESC
+    LIMIT 1
+    {%- endset -%}
 
-    {{log(value, info = True)}}
+    {%- set last_persisted_value_raw = get_sql_value(sql) -%}
 
-    {{ log_persisted_event(persisted_type = persisted_type, persisted_user=target.user, persisted_target=target.name, persisted_is_full_refresh=flags.FULL_REFRESH, persisted_model = this.name, persisted_relation = this.name, persisted_schema = this.schema, last_loaded_persisted_value =  value) }}    
+    {%- set last_persisted_value -%}
+    {% if last_persisted_value_raw != None %}'{{ last_persisted_value_raw }}'{% else %}null::varchar(512){% endif %}
+    {%- endset -%}
+
+    {%- set added_date_ =  dbt_utils.dateadd(date_part1, interval, last_persisted_value)-%}
+
+    {%- set added_date_sql -%}
+    SELECT {{added_date_}} as COLUMN_
+    {%- endset -%}
+
+    {%- set added_date_raw = get_sql_value(added_date_sql) -%}
+
+    {%- set added_date -%}
+    {% if added_date_raw != None %}'{{ added_date_raw }}'{% else %}null::varchar(512){% endif %}
+    {%- endset -%}
+
+    {%- set date_part_diff -%}
+    'seconds'
+    {%- endset -%}
+
+    {%- set utc_current_timestamp = dbt_utils.current_timestamp_in_utc() -%}          
+
+    {%- set date_part_added_date_sql =  dbt_utils.datediff(added_date, utc_current_timestamp, date_part_diff) -%}
+
+    {%- set flag_sql -%}
+    SELECT {{date_part_added_date_sql}} as COLUMN_
+    {%- endset -%}
+
+    {%- set flag = get_sql_value(flag_sql)-%}
+
+    {% if flag == None %}
+    {{ return(0) }}
+    {%- elif flag|int > 0 -%}
+    {{ return(0) }}
     {%- else -%}
-    {{ log_persisted_event(persisted_type = persisted_type, persisted_user=target.user, persisted_target=target.name, persisted_is_full_refresh=flags.FULL_REFRESH, persisted_model = this.name, persisted_relation = this.name, persisted_schema = this.schema, last_loaded_persisted_value = last_loaded_persisted_value) }}
-    
-    {%- endif -%}
-    
-    {%- endif -%}
+    {{ return(1) }}
+    {%- endif  -%}
 
 {% endmacro %}

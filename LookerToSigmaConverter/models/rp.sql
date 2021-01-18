@@ -15,11 +15,9 @@
 
         {% set alias = "repeat_purchase_orders" %}
 
-        {% set persisted_sql = '1 HOUR' %}
+        {% set persisted_sql = '5 MINUTES' %}
 
-        {{ config( pre_hook=before_begin ("{{log_persisted_event_started('PERSIST_FOR', '1 HOUR')}}")) }}
-
-        {{ config( pre_hook=after_commit ("{{log_persisted_event_completed('PERSIST_FOR', '1 HOUR')}}")) }}
+        {{ config( post_hook=after_commit ("{{log_persisted_event_completed('PERSIST_FOR', '5 MINUTES')}}")) }}
 
         --
 
@@ -92,7 +90,7 @@
 
         {%- endset -%}
 
-        {%- set condition_ = get_persisted_flag(this.name, persisted_type, persisted_sql) -%}
+        {%- set condition_ = get_persisted_regenration_flag(persisted_type, persisted_sql) -%}
 
         {{log(condition_, info = True)}}               
 
@@ -130,5 +128,3 @@
         {{log(bs.status, info = True)}}
 
         {%- set log_transition = log_persisted_event_transition(persisted_type, persisted_sql, bs.status) -%}
-
-        {%- set log_load = log_persisted_load(persisted_type, persisted_sql) -%}
