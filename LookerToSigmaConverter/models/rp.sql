@@ -6,7 +6,27 @@
                 ) 
         }}
 
-        {{ config(schema = "SIGMA_ITS_SIG") }}
+        --these need to change by converter
+
+        {{ config(schema = "sigma_its_sig") }}
+        {{ config(alias = "repeat_purchase_orders") }}
+
+        {% set persisted_type = 'PERSIST_FOR' %}
+
+        {% set alias = "repeat_purchase_orders" %}
+
+        {% set persisted_sql = '1 HOUR' %}
+
+        {{ config( pre_hook=before_begin ("{{log_persisted_event_started('PERSIST_FOR', '1 HOUR')}}")) }}
+
+        {{ config( pre_hook=after_commit ("{{log_persisted_event_completed('PERSIST_FOR', '1 HOUR')}}")) }}
+
+        --
+
+        
+        {% set ns = namespace(skipped="") %}
+        {% set bs = namespace(status="") %}      
+        
 
         {%- set sourceSQL -%}
 
@@ -57,7 +77,8 @@
         END) AND number_subsequent_orders <= 30 THEN TRUE 
             ELSE FALSE 
         END) AS LESS_THAN_30,
-        NUMBER_SUBSEQUENT_ORDERS
+        NUMBER_SUBSEQUENT_ORDERS,
+        CURRENT_TIMESTAMP AS LOAD_TIME
             FROM (SELECT
         order_items.order_id
         , COUNT(DISTINCT repeat_order_items.id) AS number_subsequent_orders
@@ -71,18 +92,24 @@
 
         {%- endset -%}
 
-        {%- set condition = 0 -%}
+        {%- set condition_ = get_persisted_flag(this.name, persisted_type, persisted_sql) -%}
 
-        {%- if condition == 1 -%}
+        {{log(condition_, info = True)}}               
+
+        {%- if condition_ == 1 -%}
 
         {%- set finalSQL -%}
         SELECT * FROM {{ this }}
-        WHERE FALSE 
+        WHERE FALSE
         {%- endset -%}
 
+        {% set ns.skipped = "true" %}
+
+        {{log(ns.skipped, info = True)}}
+    
         {%- else -%}
 
-        {%- set finalSQL = sourceSQL -%}        
+        {%- set finalSQL = sourceSQL -%}
 
         {%- endif-%}        
 
@@ -92,6 +119,16 @@
 
         {%- else -%}
 
-        {{ sourceSQL }}        
+        {{ sourceSQL }}
 
         {%- endif -%}
+
+        {{log(ns.skipped, info = True)}}
+
+        {%- set bs.status = get_status_value(ns.skipped) -%}
+
+        {{log(bs.status, info = True)}}
+
+        {%- set log_transition = log_persisted_event_transition(persisted_type, persisted_sql, bs.status) -%}
+
+        {%- set log_load = log_persisted_load(persisted_type, persisted_sql) -%}

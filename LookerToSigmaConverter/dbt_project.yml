@@ -25,6 +25,11 @@ clean-targets:         # directories to be removed by `dbt clean`
     - "dbt_modules"
 
 
+on-run-start:
+  - "{{ create_persisted_schema() }}"
+  - "{{ create_persisted_table() }}"
+
+
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 
@@ -34,3 +39,5 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   converter:
       # Applies to all files under models/example/
+
+
