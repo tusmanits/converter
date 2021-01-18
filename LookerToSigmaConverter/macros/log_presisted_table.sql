@@ -83,6 +83,8 @@
 {% macro log_persisted_event(persisted_type, persisted_timestamp, persisted_schema, persisted_relation, persisted_model, persisted_user, persisted_target, persisted_is_full_refresh,
     persisted_sql, persisted_status, persisted_transition_status, last_loaded_persisted_value) %}
 
+    {%- set persisted_sql_replace_quoutes = persisted_sql|replace("'", "''") -%}
+
     {%- set insert_sql -%}
 
     insert into {{ get_persisted_relation() }} (
@@ -109,7 +111,7 @@
         {% if persisted_user != None %}'{{ persisted_user }}'{% else %}null::varchar(512){% endif %},
         {% if persisted_target != None %}'{{ persisted_target }}'{% else %}null::varchar(512){% endif %},
         {% if persisted_is_full_refresh %}TRUE{% else %}FALSE{% endif %},
-        {% if persisted_sql != None %}'{{ persisted_sql }}'{% else %}null::varchar(512){% endif %},
+        {% if persisted_sql_replace_quoutes != None %}'{{ persisted_sql_replace_quoutes }}'{% else %}null::varchar(512){% endif %},
         {% if persisted_status != None %}'{{ persisted_status }}'{% else %}null::varchar(1000){% endif %},
         {% if persisted_transition_status != None %}'{{ persisted_transition_status }}'{% else %}null::varchar(512){% endif %},
         {% if last_loaded_persisted_value != None %}'{{ last_loaded_persisted_value }}'::varchar(512){% else %}null::varchar(512){% endif %}
@@ -234,7 +236,7 @@
 {% endmacro %}
 
 
-{% macro log_persited_load_for_sql_trigger_value(persisted_type, persisted_sql) %}
+{% macro log_persisted_load_for_sql_trigger_value(persisted_type, persisted_sql) %}
     
     {%- set log_table = get_persisted_relation() -%}
 
@@ -257,8 +259,9 @@
 
     {%- if transition_status == 'LOADED' -%}
 
+
         {%- set last_persisted_value_query -%}
-        {{persisted_sql}}    
+        SELECT ({{persisted_sql}}) AS COLUMN_    
         {%- endset -%}
 
         {%- set last_persisted_value = get_sql_value(last_persisted_value_query) -%}
@@ -279,7 +282,7 @@
 
     {%- elif persisted_type == 'SQL_TRIGGER_VALUE' -%}
 
-    {%- set loaded = log_persited_load_for_sql_trigger_value(persisted_type, persisted_sql) -%}
+    {%- set loaded = log_persisted_load_for_sql_trigger_value(persisted_type, persisted_sql) -%}
 
     {%- endif -%}  
 {% endmacro %}
@@ -293,8 +296,14 @@
 {% endmacro %}
 
 {% macro get_persisted_regenration_flag(persisted_type, persisted_sql) %}
+
+    {%- if persisted_type == 'PERSIST_FOR' -%}
+        {{return (get_persisted_flag_for_persist_for(persisted_type,  persisted_sql))}}
+    {%- elif persisted_type == 'SQL_TRIGGER_VALUE' -%}
+        {{return (get_persisted_flag_for_sql_triger_value(persisted_type,  persisted_sql))}}
+    {%- endif -%}
     
-    {{return (get_persisted_flag_for_persist_for(persisted_type,  persisted_sql))}}
+    
 
 {% endmacro %}
 
@@ -365,5 +374,52 @@
     {%- else -%}
     {{ return(1) }}
     {%- endif  -%}
+
+{% endmacro %}
+
+
+
+{% macro get_persisted_flag_for_sql_triger_value(persisted_type, persisted_sql) %}
+
+    {%- set log_table = get_persisted_relation() -%}
+
+    {% set model_name = this.name %}
+    {% set model_schema = this.schema %}
+
+
+    {%- set sql -%}
+    SELECT UPPER(LAST_LOADED_PERSISTED_VALUE) AS COLUMN_ from {{ log_table }}
+    WHERE 
+        LOWER(PERSISTED_MODEL) = LOWER('{{ model_name }}') 
+    AND LOWER(PERSISTED_SCHEMA) = LOWER('{{ model_schema }}') 
+    AND LOWER(PERSISTED_TYPE) = lower('{{persisted_type}}')
+    AND LOWER(PERSISTED_STATUS) = LOWER('COMPLETED')
+    AND LOWER(PERSISTED_TRANSITION_STATUS) = LOWER('LOADED')
+    ORDER BY PERSISTED_TIMESTAMP DESC
+    LIMIT 1
+    {%- endset -%}
+
+    {%- set last_persisted_value_raw = get_sql_value(sql) -%}
+
+    {%- if last_persisted_value_raw == None -%}
+    
+        {{ return(0) }}}
+
+    {%- else -%}
+
+        {%- set last_loaded_persisted_value = last_persisted_value_raw -%}
+        
+        {%- set last_persisted_value_query -%}
+        SELECT ({{persisted_sql}}) AS COLUMN_    
+        {%- endset -%}
+
+        {%- set last_persisted_value = get_sql_value(last_persisted_value_query) -%}
+
+        {%- if last_loaded_persisted_value == last_persisted_value -%}
+            {{ return(1) }}
+        {%- else -%}
+            {{ return(0) }}
+        {%- endif -%}
+    {%- endif -%}
 
 {% endmacro %}
