@@ -29,14 +29,9 @@
         {%- set sourceSQL -%}
 
         SELECT
-        order_items.order_id
-        , COUNT(DISTINCT repeat_order_items.id) AS number_subsequent_orders
-        , MIN(repeat_order_items.created_at) AS next_order_date
-        , MIN(repeat_order_items.order_id) AS next_order_id
-      FROM order_items
-      LEFT JOIN order_items repeat_order_items
-        ON order_items.user_id = repeat_order_items.user_id
-        AND order_items.created_at < repeat_order_items.created_at
+        a.order_id
+      FROM order_items a
+      Left join order_items b on a.order_id = b.order_id
       GROUP BY 1
 
         {%- endset -%}

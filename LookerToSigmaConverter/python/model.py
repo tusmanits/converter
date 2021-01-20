@@ -46,7 +46,7 @@ with open('../data/its_sig/its_sig.model.lkml', 'r') as file:
     logging.info(model)
 
 
-    viewFile = '../data/its_sig/repeat_purchase_fact.view.lkml'
+    viewFile = '../data/its_sig/events_pdt.view.lkml'
 
     viewObj = View()
     views = viewObj.getViewInfomationFromFile(viewFile)
@@ -59,6 +59,10 @@ with open('../data/its_sig/its_sig.model.lkml', 'r') as file:
         view.schemaName = model.connection.schemaName
         view.databaseName = model.connection.databaseName
         view.targetSchema = model.name
+
+        view.getTableNamesFromSQL()
+
+        logging.info(view.dependencies)
 
         view.writedbtModel()
 

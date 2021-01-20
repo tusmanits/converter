@@ -1,4 +1,5 @@
 import lkml
+import re
 
 from dimension import Dimension
 
@@ -14,6 +15,7 @@ class View:
         self.viewType = ''
         self.persistedType = ''
         self.persistedSQL = ''
+        self.dependencies = ''
 
     def setView(self, view):
 
@@ -50,7 +52,112 @@ class View:
 
             self.dimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
 
+    def checkKeyExists(self, key, dictionary):
+        found = False
 
+        if key in dictionary:
+            found = True
+
+        return found
+
+    def getKeyValue(self, key, dictionary):
+        val = {}
+
+        for item in dictionary:
+            if key in item:
+                val = item
+        return val
+
+    def getTableNamesFromSQL(self):
+
+        if self.sql is not None and self.sql != '':
+
+            processedSQL = re.sub(r'\s+',' ', self.sql.replace('\n', ' ').replace('\t', ' '))
+            print("Source SQL: {}".format(processedSQL))
+            dependencies = []
+
+            keywords = ['lateral']
+
+            rx = re.compile(r'FROM\s+(\w+\s*\w*,\s*\w+\s*\w*)\s+',re.IGNORECASE)
+
+            for match in rx.finditer(processedSQL):
+                group = match.group(1)
+                found = False
+                for keyword in keywords:
+                    if keyword in group:
+                        found = True
+
+                if not found:
+                    from_ = 'FROM {}'.format(group)
+                    list_ = group.split(',')
+                    transformedList = []
+                    dictList = []
+                    for item in list_:
+                        itemStripped = item.strip()
+                        if '.' not in itemStripped:
+                            transformItem = "{}.{}".format(self.schemaName, itemStripped)
+                            dictObj = {itemStripped:transformItem}
+                            check = self.checkKeyExists(itemStripped, dictList) 
+                            if not check:
+                                dictList.append(dictObj)
+
+                        else:
+                            dictObj = {itemStripped:itemStripped}
+                            found = self.checkKeyExists(itemStripped, dictList)
+                            if not check:
+                                dictList.append(dictObj)
+
+                    schemaConcatenatedList = []
+
+                    for item in list_:
+                        key = item.strip()
+                        schemaConcatenatedItem = self.getKeyValue(key, dictList)
+                        value = schemaConcatenatedItem[key]
+                        schemaConcatenatedList.append(value)
+
+                    to_ = "FROM {}".format(' , '.join(schemaConcatenatedList))
+
+                    processedSQL = re.sub(r'{}'.format(from_), to_, processedSQL, flags=re.I)
+
+            
+
+
+            processedSQL = re.sub(r'\s+',' ', processedSQL)
+            
+            rx = re.compile(r'FROM\s+(\w+)', re.IGNORECASE)
+            substitued = []
+            for match in rx.finditer(processedSQL):
+                group = match.group(1)
+                
+                if group not in substitued:
+                    itemStripped = group.strip()
+                    from_ = 'FROM {}'.format(group)
+                    schemaConcatenatedValue ='{}.{}'.format(self.schemaName, itemStripped)
+                    to_ = 'FROM {}'.format(schemaConcatenatedValue)
+                    processedSQL = re.sub(from_, to_, processedSQL, flags=re.I)
+
+                    substitued.append(itemStripped)
+
+            processedSQL = re.sub(r'\s+',' ', processedSQL)
+
+
+            rx = re.compile(r'JOIN\s+(\w+)', re.IGNORECASE)
+            substitued = []
+            for match in rx.finditer(processedSQL):
+                group = match.group(1)
+                
+                if group not in substitued:
+                    itemStripped = group.strip()
+                    from_ = 'JOIN {}'.format(group)
+                    schemaConcatenatedValue ='{}.{}'.format(self.schemaName, itemStripped)
+                    to_ = 'JOIN {}'.format(schemaConcatenatedValue)
+                    processedSQL = re.sub(from_, to_, processedSQL, flags=re.I)
+
+                    substitued.append(itemStripped)
+
+            processedSQL = re.sub(r'\s+',' ', processedSQL)
+
+            self.sql = processedSQL
 
     def __str__(self):
         return """
