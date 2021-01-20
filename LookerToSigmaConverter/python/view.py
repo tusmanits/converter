@@ -7,15 +7,13 @@ class View:
     def __init__(self):
         self.name = ''
         self.sql = ''
-        self.is_derived_table = False
-        self.is_native_derived_table = False
-        self.persist_for = ''
-        self.sql_trigger_name = ''
         self.databaseName = ''
         self.schemaName = ''
         self.dimenions = []
-        self.materialized = ''
         self.targetSchema = ''
+        self.viewType = ''
+        self.persistedType = ''
+        self.persistedSQL = ''
 
     def setView(self, view):
 
@@ -24,15 +22,22 @@ class View:
 
             if 'sql' in view['derived_table']:
                 self.sql = view['derived_table']['sql']
+                self.sql = self.sql.replace('"','\"')
 
             if 'persist_for' in view['derived_table']:
-                self.persist_for = view['derived_table']['persist_for']
+                self.persistedSQL = view['derived_table']['persist_for']
+                self.persistedSQL = self.persistedSQL.replace('"', "\"")
+                self.persistedType = 'PERSIST_FOR'
 
-            self.materialized = 'table'
+            if 'sql_trigger_value' in view['derived_table']:
+                self.persistedSQL = view['derived_table']['sql_trigger_value']
+                self.persistedSQL = self.persistedSQL.replace('"', "\"")
+                self.persistedType = 'SQL_TRIGGER_VALUE'
+
+            self.viewType = 'PDT'
 
         if 'name' in view:
             self.name = view['name']
-
 
         if 'dimensions' in view:
 
@@ -50,11 +55,11 @@ class View:
     def __str__(self):
         return """
             View: ---------------------------------------------------------------------------------------------------------------
-            View Name:            {name}
-            Is Derived Table:     {is_derived_table}
-            Presist For:          {persist_for}
-            SQL:                  {sql}
-            """.format(name = self.name, is_derived_table = self.is_derived_table, sql = self.sql, persist_for = self.persist_for)
+            View Name       :     {name}
+            Persisted Type  :     {persistedType}
+            Persisted SQL   :     {persistedSQL}
+            SQL             :     {sql}
+            """.format(name = self.name, persistedType = self.persistedType, sql = self.sql, persistedSQL = self.persistedSQL)
 
     
     def getViewInfomationFromFile(self, fileName):
@@ -78,7 +83,12 @@ class View:
 
     def writedbtModel(self):
 
-        fileName = self.name.lower().strip() + '.sql'
+
+        f = open("pdt_placeholder.ddl", "r")
+        placeholder = f.read()
+        dbtModelName = self.targetSchema.lower().strip().replace(' ', '_') + '_' + self.name.lower().strip().replace(' ', '_')
+
+        fileName =  dbtModelName + '.sql'
 
         filePath = "../models/" + fileName
 
@@ -87,79 +97,24 @@ class View:
 
         sql = self.getViewSQL()
 
-        content = """
-
-        {{ config(materialized = "ephemeral") }}
-
-        {{ config(schema = "SIGMA_ITS_SIG") }}
-                
-        {%- set presist_query_sql-%}
-        SELECT 0  
-        {%- endset-%}
-
-        {%- set presist_result = run_query(presist_query_sql)-%}
-
-        {%- if execute -%}
-
-        {%- set result = presist_result.columns[0].values()|first -%}
-
-        {%- if result|int != 1 %}
-
-        {%- set execute_var -%}
-        Executing Model :  {{ this }} {{ result }} Added Result
-
-        {%- endset-%}
-
-
-        {%- set sql%}
-
-        CREATE OR REPLACE TABLE @@SCHEMANAME@@.@@TABLENAME@@
-        AS
-        @@SELECT_QUERY@@ 
-
-        {%- endset -%}
-
-        {%- do run_query(sql)-%}
-
-        {{ log( execute_var , info = True) }}
-
-        {%- else -%}
-
-        {%- set skip_var -%}
-        Skip Model :  {{ this }} {{ result }} Added Result
-
-        {%- endset -%}
-
-        {{ log( skip_var , info = True) }}
-        
-        {%- endif -%}
-        
-        {%- else -%}
-
-        {%- set execute_var -%}
-        Executing Model :  {{ this }} Added Result
-        {%- endset -%}
-
-        {{ log( execute_var , info = True) }}        
-        
-        {%- endif -%}
-
-        """.replace("@@SCHEMANAME@@",self.targetSchema).replace("@@TABLENAME@@", self.name.lower().strip()).replace("@@SELECT_QUERY@@", sql)
+        content = placeholder \
+                    .replace("@@SCHEMA@@",self.targetSchema.lower().strip()) \
+                    .replace("@@ALIAS@@", self.name.lower().strip()) \
+                    .replace("@@SQL@@", self.sql) \
+                    .replace("@@PERSISTED_TYPE@@", self.persistedType) \
+                    .replace("@@PERSISTED_SQL@@", self.persistedSQL) 
 
         with open(filePath, 'w') as file:
             file.write(content)
 
-        if self.materialized == 'table':
-            content = 'dbt run --models {}\n'.format(self.name.lower().strip())
+        if self.viewType == 'PDT':
+            content = 'dbt run --models {}\n'.format(dbtModelName)
             with open(dbtrunPresistedModelsPath, 'a') as file:
                 file.write(content)
 
-        content = 'dbt run --models {}\n'.format(self.name.lower().strip())
+        content = 'dbt run --models {}\n'.format(dbtModelName)
         with open(dbtrunModelsPath, 'a') as file:
             file.write(content)
-
-
-
 
     def writedbtModel1(self):
 
