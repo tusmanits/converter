@@ -45,6 +45,7 @@ with open('../data/its_sig/its_sig.model.lkml', 'r') as file:
     model.setModel(parsed)
     logging.info(model)
 
+    viewList = []
 
     viewFile = '../data/its_sig/events_pdt.view.lkml'
 
@@ -60,9 +61,18 @@ with open('../data/its_sig/its_sig.model.lkml', 'r') as file:
         view.databaseName = model.connection.databaseName
         view.targetSchema = model.name
 
-        view.getTableNamesFromSQL()
+        view.injectViewSchema()
 
-        logging.info(view.dependencies)
+        view.setDBTModelName()
 
+        viewList.append(view)  
+
+    #view.writedbtModel()
+
+
+    for view in viewList:
+        view.injectSqlTableName(viewList)
+        view.injectSqlTableNameInSQLTriggerValue(viewList)
         view.writedbtModel()
+
 

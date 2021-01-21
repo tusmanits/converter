@@ -9,15 +9,15 @@
         --these need to change by converter
 
         {{ config(schema = "sigma_its_sig") }}
-        {{ config(alias = "repeat_purchase_orders1") }}
+        {{ config(alias = "events_summary") }}
 
         {% set persisted_type = 'SQL_TRIGGER_VALUE' %}
 
-        {% set alias = "repeat_purchase_orders1" %}
+        {% set alias = "events_summary" %}
 
-        {% set persisted_sql = "SELECT 'LOADED'" %}
+        {% set persisted_sql = "SELECT MAX(id) FROM SIGMA_ITS_SIG.clean_events" %}
 
-        {{ config( post_hook=after_commit ("{{log_persisted_event_completed(\"SQL_TRIGGER_VALUE\",\"SELECT 'LOADED'\")}}")) }}
+        {{ config( post_hook=after_commit ("{{log_persisted_event_completed(\"SQL_TRIGGER_VALUE\",\"SELECT MAX(id) FROM SIGMA_ITS_SIG.clean_events\")}}")) }}
 
         --
 
@@ -28,7 +28,11 @@
 
         {%- set sourceSQL -%}
 
-        SELECT * FROM {{ref('rp')}}
+        
+            SELECT
+            *
+            FROM (SELECT EVENT_TYPE, created_at::date as date, COUNT(*) AS num_events FROM {{ref('sigma_its_sig_clean_events')}} AS clean_events GROUP BY 1, 2)
+            
 
         {%- endset -%}
 
@@ -44,8 +48,6 @@
         {%- endset -%}
 
         {% set ns.skipped = "true" %}
-
-        {{log(ns.skipped, info = True)}}
     
         {%- else -%}
 
@@ -63,10 +65,6 @@
 
         {%- endif -%}
 
-        {{log(ns.skipped, info = True)}}
-
         {%- set bs.status = get_status_value(ns.skipped) -%}
-
-        {{log(bs.status, info = True)}}
 
         {%- set log_transition = log_persisted_event_transition(persisted_type, persisted_sql, bs.status) -%}

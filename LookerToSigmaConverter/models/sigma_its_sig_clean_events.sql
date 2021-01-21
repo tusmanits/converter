@@ -9,15 +9,15 @@
         --these need to change by converter
 
         {{ config(schema = "sigma_its_sig") }}
-        {{ config(alias = "repeat_purchase_facts") }}
+        {{ config(alias = "clean_events") }}
 
-        {% set persisted_type = 'PERSIST_FOR' %}
+        {% set persisted_type = 'SQL_TRIGGER_VALUE' %}
 
-        {% set alias = "repeat_purchase_facts" %}
+        {% set alias = "clean_events" %}
 
-        {% set persisted_sql = "24 hours" %}
+        {% set persisted_sql = "SELECT CURRENT_DATE()" %}
 
-        {{ config( post_hook=after_commit ("{{log_persisted_event_completed(\"PERSIST_FOR\",\"24 hours\")}}")) }}
+        {{ config( post_hook=after_commit ("{{log_persisted_event_completed(\"SQL_TRIGGER_VALUE\",\"SELECT CURRENT_DATE()\")}}")) }}
 
         --
 
@@ -28,11 +28,11 @@
 
         {%- set sourceSQL -%}
 
-        SELECT
-        a.order_id
-      FROM order_items a
-      Left join order_items b on a.order_id = b.order_id
-      GROUP BY 1
+        
+            SELECT
+            *
+            FROM (SELECT * FROM PUBLIC.events WHERE EVENT_TYPE NOT IN ('test', 'staff'))
+            
 
         {%- endset -%}
 

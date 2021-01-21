@@ -16,6 +16,13 @@ class View:
         self.persistedType = ''
         self.persistedSQL = ''
         self.dependencies = ''
+        self.dbtModelName = ''
+
+    def setDBTModelName(self):
+        self.dbtModelName = self.targetSchema.lower().strip().replace(' ', '_') + '_' + self.name.lower().strip().replace(' ', '_')
+
+    def getDBTModelName(self):
+        return self.dbtModelName
 
     def setView(self, view):
 
@@ -41,16 +48,15 @@ class View:
         if 'name' in view:
             self.name = view['name']
 
+        dimensions_ = []
         if 'dimensions' in view:
-
-            dimensions_ = []
             
             for dimensionRow in view['dimensions']:
                 dimensionObj = Dimension()
                 dimensionObj.setDimension(dimensionRow)
                 dimensions_.append(dimensionObj)
 
-            self.dimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
+        self.dimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
 
     def checkKeyExists(self, key, dictionary):
         found = False
@@ -68,7 +74,7 @@ class View:
                 val = item
         return val
 
-    def getTableNamesFromSQL(self):
+    def injectViewSchema(self):
 
         if self.sql is not None and self.sql != '':
 
@@ -117,9 +123,7 @@ class View:
 
                     to_ = "FROM {}".format(' , '.join(schemaConcatenatedList))
 
-                    processedSQL = re.sub(r'{}'.format(from_), to_, processedSQL, flags=re.I)
-
-            
+                    processedSQL = re.sub(r'{}'.format(from_), to_, processedSQL, flags=re.I)            
 
 
             processedSQL = re.sub(r'\s+',' ', processedSQL)
@@ -186,14 +190,51 @@ class View:
 
         return views
 
+    def injectSqlTableName(self, views):
+        rx = re.compile(r'\$\{(\w+)\.SQL_TABLE_NAME\}',re.IGNORECASE)
+        for match in rx.finditer(self.sql):
+            group = match.group(1)
+            
+            view = self.getViewByName(group.lower().strip(), views)
+            dbtModelName = view.getDBTModelName() 
 
+            ref = r"{{ref('" + dbtModelName +r"')}}"
+
+            processedSQL = re.sub(r'\$\{\w+\.SQL_TABLE_NAME\}',ref, self.sql)
+
+            self.sql = processedSQL
+
+    def injectSqlTableNameInSQLTriggerValue(self, views):
+        rx = re.compile(r'\$\{(\w+)\.SQL_TABLE_NAME\}',re.IGNORECASE)
+        for match in rx.finditer(self.persistedSQL):
+            group = match.group(1)
+            
+            view = self.getViewByName(group.lower().strip(), views)
+            dbtModelName = view.getDBTModelName() 
+
+            #ref = r"{{ref('" + dbtModelName +r"')}}"
+
+            ref = "{}.{}".format(view.targetSchema, view.name) 
+
+            processedSQL = re.sub(r'\$\{\w+\.SQL_TABLE_NAME\}',ref, self.persistedSQL)
+
+            self.persistedSQL = processedSQL
+
+
+    
+    def getViewByName(self, name, views):
+        view = None
+
+        for view_ in views:
+            if view_.name == name:
+                view = view_
+        return view
 
     def writedbtModel(self):
 
-
         f = open("pdt_placeholder.ddl", "r")
         placeholder = f.read()
-        dbtModelName = self.targetSchema.lower().strip().replace(' ', '_') + '_' + self.name.lower().strip().replace(' ', '_')
+        dbtModelName = self.dbtModelName
 
         fileName =  dbtModelName + '.sql'
 
@@ -207,7 +248,7 @@ class View:
         content = placeholder \
                     .replace("@@SCHEMA@@",self.targetSchema.lower().strip()) \
                     .replace("@@ALIAS@@", self.name.lower().strip()) \
-                    .replace("@@SQL@@", self.sql) \
+                    .replace("@@SQL@@", sql) \
                     .replace("@@PERSISTED_TYPE@@", self.persistedType) \
                     .replace("@@PERSISTED_SQL@@", self.persistedSQL) 
 
@@ -220,38 +261,6 @@ class View:
                 file.write(content)
 
         content = 'dbt run --models {}\n'.format(dbtModelName)
-        with open(dbtrunModelsPath, 'a') as file:
-            file.write(content)
-
-    def writedbtModel1(self):
-
-        fileName = self.name.lower().strip() + '.sql'
-
-        filePath = "../models/" + fileName
-
-        dbtrunModelsPath = "run_models.sh" 
-        dbtrunPresistedModelsPath = "run_presisted_models.sh"
-
-        sql = self.getViewSQL()
-
-        content = """
-        {{{{ config(materialized = "{materialized}") }}}}
-
-        {{{{ config(schema = "{schema}") }}}}
-
-        {sql}
-
-        """.format(schema = self.targetSchema, materialized = self.materialized, sql = sql)
-
-        with open(filePath, 'w') as file:
-            file.write(content)
-
-        if self.materialized == 'table':
-            content = 'dbt run --models {}\n'.format(self.name.lower().strip())
-            with open(dbtrunPresistedModelsPath, 'a') as file:
-                file.write(content)
-
-        content = 'dbt run --models {}\n'.format(self.name.lower().strip())
         with open(dbtrunModelsPath, 'a') as file:
             file.write(content)
 
@@ -272,6 +281,9 @@ class View:
                 dimList.append(row)
 
         cols =  ',\n'.join(dimList)
+
+        if cols == None or cols.strip() == '':
+            cols = '*'
 
         if self.is_derived_table:
 
