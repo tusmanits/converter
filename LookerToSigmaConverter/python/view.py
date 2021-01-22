@@ -17,6 +17,7 @@ class View:
         self.persistedSQL = ''
         self.dependencies = ''
         self.dbtModelName = ''
+        self.sql_table_name = None
 
     def setDBTModelName(self):
         self.dbtModelName = self.targetSchema.lower().strip().replace(' ', '_') + '_' + self.name.lower().strip().replace(' ', '_')
@@ -27,8 +28,7 @@ class View:
     def setView(self, view):
 
         if 'derived_table' in view:
-            self.is_derived_table = True
-
+            
             if 'sql' in view['derived_table']:
                 self.sql = view['derived_table']['sql']
                 self.sql = self.sql.replace('"','\"')
@@ -45,6 +45,10 @@ class View:
 
             self.viewType = 'PDT'
 
+        elif 'sql_table_name' in view:
+            self.viewType = 'VIEW'
+            self.sql_table_name = view['sql_table_name']
+
         if 'name' in view:
             self.name = view['name']
 
@@ -56,7 +60,16 @@ class View:
                 dimensionObj.setDimension(dimensionRow)
                 dimensions_.append(dimensionObj)
 
-        self.dimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
+        
+        allDimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
+
+        validDimensions = []
+
+        for dimension_ in allDimensions:
+            if not dimension_.isExcluded:
+                validDimensions.append(dimension_) 
+
+        self.dimensions = validDimensions
 
     def checkKeyExists(self, key, dictionary):
         found = False
@@ -163,6 +176,8 @@ class View:
 
             self.sql = processedSQL
 
+            print(self.sql)
+
     def __str__(self):
         return """
             View: ---------------------------------------------------------------------------------------------------------------
@@ -232,7 +247,12 @@ class View:
 
     def writedbtModel(self):
 
-        f = open("pdt_placeholder.ddl", "r")
+        if self.viewType == 'PDT':
+            placeholder = 'pdt_placeholder.ddl'
+        else:
+            placeholder = 'view_placeholder.ddl'
+
+        f = open(placeholder, "r")
         placeholder = f.read()
         dbtModelName = self.dbtModelName
 
@@ -243,7 +263,7 @@ class View:
         dbtrunModelsPath = "run_models.sh" 
         dbtrunPresistedModelsPath = "run_presisted_models.sh"
 
-        sql = self.getViewSQL()
+        sql = self.sql
 
         content = placeholder \
                     .replace("@@SCHEMA@@",self.targetSchema.lower().strip()) \
@@ -285,14 +305,22 @@ class View:
         if cols == None or cols.strip() == '':
             cols = '*'
 
-        if self.is_derived_table:
-
+        if self.viewType == 'PDT':
             viewSQL = """
             SELECT
             {cols}
             FROM ({sql})
             """.format(cols = cols, sql = self.sql)
+        elif self.viewType == 'VIEW':
+            viewSQL = """
+            SELECT
+            {cols}
+            FROM {sql}
+            """.format(cols = cols, sql = self.sql_table_name)
+        else:
+            viewSQL = ''
 
+        self.sql = viewSQL    
         return viewSQL
 
 

@@ -13,6 +13,14 @@ class Dimension:
         self.column = ''
         self.isSubstituded = False
         self.dependenciesByPath = []
+        self.isExcluded = False
+        self.excludedReason = None
+
+    def setExcludedDimension(self):
+        found = re.search(r'\$\{\s*\w+\s*\.\s*\w+\s*\}', self.sql)
+        if found:
+            self.isExcluded = True
+            self.excludedReason = "Using other view's dimensions"
 
     def getDependencies(self):
 
@@ -65,6 +73,7 @@ class Dimension:
             self.transformYesNoDiemension()
 
         self.dependencies = self.getDependencies()
+        
 
     def getIndex(self, dimensions):
         
@@ -98,8 +107,9 @@ class Dimension:
             DependenciesByPath: {dependenciesByPath}
             SQL RAW:            {sql_raw}
             SQL:                {sql}
-            
-            """.format(name = self.name, type = self.type, sql = self.sql, primary_key = self.primaryKey, hidden = self.hidden, dependencies = self.dependencies, sql_raw = self.sql_raw, dependenciesByPath = self.dependenciesByPath)
+            IsExcluded :        {isExcluded}
+            ExcludedReason :        {excludedReason}
+            """.format(name = self.name, type = self.type, sql = self.sql, primary_key = self.primaryKey, hidden = self.hidden, dependencies = self.dependencies, sql_raw = self.sql_raw, dependenciesByPath = self.dependenciesByPath, isExcluded = self.isExcluded, excludedReason = self.excludedReason)
 
     def getDimensionName(self):
         return self.name
@@ -192,7 +202,21 @@ class Dimension:
                     dimensionsObjs[index] = dimension_
 
 
+        for dimension in dimensionsObjs:
+            dimension.setExcludedDimension()
+
+        for dimension in dimensionsObjs:
+            dependencies = dimension.getDependencies()
+            for dependencyItem in dependencies:
+                dimension_ = dimension.getDimensionByName(dependencyItem, dimensionsObjs)
+                if dimension_.isExcluded:
+                    dimension.isExcluded = True
+                    dimension.excludedReason = "Referencing to a excluded dimension."
+
         return dimensionsObjs
+
+
+
 
 
 def findPath(graph, start, path=[]): 
