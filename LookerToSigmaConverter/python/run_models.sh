@@ -91,3 +91,7 @@ dbt run --models sigma_its_sig_events
 dbt run --models sigma_its_sig_events
 dbt run --models sigma_its_sig_events
 dbt run --models sigma_its_sig_events
+dbt run --models sigma_its_sig_events
+dbt run --models sigma_its_sig_events
+dbt run --models sigma_its_sig_events
+dbt run --models sigma_its_sig_events

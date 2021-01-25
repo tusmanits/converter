@@ -105,9 +105,20 @@ def main():
                     view.databaseName = model.connection.databaseName
                     view.targetSchema = model.name
 
-                    for dimension in view.dimensions:
-                        logging.info(dimension)
+                    logging.info("-------------------------All Dimensions---------------------------------------------")
 
+                    for dimension_ in view.allDimensions:
+                        logging.info(dimension_)
+
+                    logging.info("-------------------------Valid Dimensions---------------------------------------------")
+
+                    for dimension_ in view.validDimensions:
+                        logging.info(dimension_)
+                    
+                    logging.info("-------------------------Invalid Dimensions---------------------------------------------")
+                    for dimension_ in view.excludedDimensions:
+                        logging.info(dimension_)
+                    
                     view.getViewSQL()
 
                     view.injectViewSchema()

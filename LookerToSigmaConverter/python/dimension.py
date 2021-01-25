@@ -37,6 +37,9 @@ class Dimension:
 
         return dependencies
 
+    def transformLocationDimension(self, sqlLogitute, sqlLatitute):
+        return "{}||','||{}".format(sqlLogitute, sqlLatitute)
+
     def transformYesNoDiemension(self):
         self.sql = """
         (CASE 
@@ -66,6 +69,13 @@ class Dimension:
             self.primary_key = dimension['primary_key']
 
         self.sql = self.sql_raw
+
+        if self.type == 'location':
+            if 'sql_latitude' in dimension:
+                sqlLatitude = dimension['sql_latitude']
+            if 'sql_longitude' in dimension:
+                sqlLongitude = dimension['sql_longitude']
+            self.sql = self.transformLocationDimension(sqlLongitude, sqlLatitude)
 
         self.transformTableDimensions()
 
@@ -108,7 +118,7 @@ class Dimension:
             SQL RAW:            {sql_raw}
             SQL:                {sql}
             IsExcluded :        {isExcluded}
-            ExcludedReason :        {excludedReason}
+            ExcludedReason :    {excludedReason}
             """.format(name = self.name, type = self.type, sql = self.sql, primary_key = self.primaryKey, hidden = self.hidden, dependencies = self.dependencies, sql_raw = self.sql_raw, dependenciesByPath = self.dependenciesByPath, isExcluded = self.isExcluded, excludedReason = self.excludedReason)
 
     def getDimensionName(self):

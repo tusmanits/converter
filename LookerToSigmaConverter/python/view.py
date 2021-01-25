@@ -18,6 +18,9 @@ class View:
         self.dependencies = ''
         self.dbtModelName = ''
         self.sql_table_name = None
+        self.allDimensions = []
+        self.validDimensions = []
+        self.excludedDimensions = []
 
     def setDBTModelName(self):
         self.dbtModelName = self.targetSchema.lower().strip().replace(' ', '_') + '_' + self.name.lower().strip().replace(' ', '_')
@@ -64,12 +67,18 @@ class View:
         allDimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
 
         validDimensions = []
+        excludedDimensions = []
 
         for dimension_ in allDimensions:
             if not dimension_.isExcluded:
-                validDimensions.append(dimension_) 
+                validDimensions.append(dimension_)
+            else:
+                excludedDimensions.append(dimension_)
 
+        self.allDimensions = allDimensions
         self.dimensions = validDimensions
+        self.validDimensions = validDimensions
+        self.excludedDimensions = excludedDimensions
 
     def checkKeyExists(self, key, dictionary):
         found = False
