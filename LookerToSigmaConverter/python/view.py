@@ -63,7 +63,434 @@ class View:
                 dimensionObj.setDimension(dimensionRow)
                 dimensions_.append(dimensionObj)
 
+        dimensionGroupList = []
+        if 'dimension_groups' in view:
+
+            for dimension_groupRow in view['dimension_groups']:
+                print('Dimension Group Row-----------------'+str(dimension_groupRow))
+
+                baseName = None
+
+                if '${TABLE}.' in dimension_groupRow['sql']:
+                    baseName = dimension_groupRow['sql'].replace('${TABLE}.', '')
+                dimensionGroupName = dimension_groupRow['name']
+                print("baseName:" + baseName)
+
+                if 'timeframes' in dimension_groupRow:
+                    name = None
+                    type = None
+                    sql = None
+
+                    for timeframe in dimension_groupRow['timeframes']:
+                        name = '{}_{}'.format(dimensionGroupName, timeframe)
+                        if timeframe == 'raw':
+                            type = 'date'
+                            sql="{}".format(baseName)
+
+                        elif timeframe == 'date':
+                            type = 'string'
+                            sql = "TO_CHAR(TO_DATE({}), 'YYYY-MM-DD')".format(baseName)
+
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+
+                        elif timeframe == 'week':
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('week', {} ), 'YYYY-MM-DD')".format(baseName)
+
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'month':
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('month',{}), 'YYYY-MM')".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'time':
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('second',{}), 'YYYY-MM-DD HH24:MI:SS')".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'yesno':
+                            type = 'yesno'
+                            sql="{}".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'day_of_month':
+                            type = 'string'
+                            sql="EXTRACT(DAY FROM {} )::integer".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'day_of_year':
+                            type = 'string'
+                            sql="EXTRACT(DOY FROM {} )::integer".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'hour_of_day':
+                            type = 'string'
+                            sql="CAST(EXTRACT(HOUR FROM CAST({}  AS TIMESTAMP)) AS INT)".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'time_of_day':
+                            type = 'string'
+                            sql="TO_CHAR({} , 'HH24:MI')".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'week_of_year':
+                            type = 'string'
+                            sql="EXTRACT(WEEK FROM {} )::int".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'fiscal_quarter_of_year':
+                            type = 'string'
+                            sql="(CAST('Q' AS VARCHAR) || CAST(CEIL(EXTRACT(MONTH FROM {} )::integer / 3) AS VARCHAR))".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'quarter_of_year':
+                            type = 'string'
+                            sql="(CAST('Q' AS VARCHAR) || CAST(CEIL(EXTRACT(MONTH FROM {} )::integer / 3) AS VARCHAR))".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'day_of_week_index':
+                            type = 'string'
+                            sql="MOD(EXTRACT(DOW FROM {} )::integer - 1 + 7, 7)".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'fiscal_month_num':
+                            type = 'string'
+                            sql="EXTRACT(MONTH FROM {} )::integer".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'fiscal_quarter':
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('month', CAST(DATE_TRUNC('quarter', {} ) AS DATE)), 'YYYY-MM')".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'fiscal_year':
+                            type = 'string'
+                            sql="EXTRACT(YEAR FROM {} )::integer".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'hour':
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('hour', {} ), 'YYYY-MM-DD HH24')".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'microsecond':
+                            type = 'string'
+                            sql="LEFT(TO_CHAR({} , 'YYYY-MM-DD HH24:MI:SS.FF'), 26)".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj) 
+                        elif timeframe == 'millisecond':
+                            type = 'string'
+                            sql="LEFT(TO_CHAR({} , 'YYYY-MM-DD HH24:MI:SS.FF'), 23)".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'minute':
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('minute', {} ), 'YYYY-MM-DD HH24:MI')".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'month_num':
+                            type = 'string'
+                            sql="EXTRACT(MONTH FROM {} )::integer".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif timeframe == 'quarter':
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('month', CAST(DATE_TRUNC('quarter', {} ) AS DATE)), 'YYYY-MM')".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj) 
+                        elif timeframe == 'second':
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('second', {} ), 'YYYY-MM-DD HH24:MI:SS')".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)  
+                        elif timeframe == 'day_of_week':
+                            type = 'string'
+                            sql="CASE TO_CHAR({} , 'DY') WHEN 'Tue' THEN 'Tuesday' WHEN 'Wed' THEN 'Wednesday' WHEN 'Thu' THEN 'Thursday' WHEN 'Sat' THEN 'Saturday' ELSE TO_CHAR({} , 'DY') || 'day' END ".format(baseName,baseName)                          
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+
+                        elif timeframe == 'month_name':
+                            type = 'string'
+                            sql="DECODE(EXTRACT('month', {} ), 1, 'January', 2, 'February', 3, 'March', 4, 'April', 5, 'May', 6, 'June', 7, 'July', 8, 'August', 9, 'September', 10, 'October', 11, 'November', 12, 'December')".format(baseName)
+                            
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        
+                        elif re.search(r'hour\d+', timeframe):
+                            rx = re.compile(r'hour(\d+)')
+                            matches_raw = [match.group(1) for match in rx.finditer(timeframe)]
+                            hourValue = None
+                            for item in matches_raw:
+                                hourValue = item
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('hour', DATE_TRUNC('hour', DATEADD('HOURS', -1 * (CAST(DATE_PART('HOUR', CAST({}  AS TIMESTAMP)) AS INT) % {}), {} ))), 'YYYY-MM-DD HH24')".format(baseName,hourValue,baseName)
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif re.search(r'millisecond\d+', timeframe):
+                            rx = re.compile(r'millisecond(\d+)')
+                            matches_raw = [match.group(1) for match in rx.finditer(timeframe)]
+                            hourValue = None
+                            for item in matches_raw:
+                                hourValue = item
+                            type = 'string'
+                            sql="LEFT(TO_CHAR(TO_TIMESTAMP(LEFT(TO_CHAR(DATEADD('NANOSECOND', -1 * (CAST(DATE_PART('NANOSECOND', CAST({}  AS TIMESTAMP)) AS INT) % ({} * 1000000)), {} ), 'YYYY-MM-DD HH24:MI:SS.FF'), 23)), 'YYYY-MM-DD HH24:MI:SS.FF'), 23)".format(baseName,hourValue,baseName)
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
+                        elif re.search(r'minute\d+', timeframe):
+                            rx = re.compile(r'minute(\d+)')
+                            matches_raw = [match.group(1) for match in rx.finditer(timeframe)]
+                            hourValue = None
+                            for item in matches_raw:
+                                hourValue = item
+                            type = 'string'
+                            sql="TO_CHAR(DATE_TRUNC('minute', DATE_TRUNC('minute', TO_TIMESTAMP((EXTRACT('EPOCH', CAST({}  AS TIMESTAMP_TZ)) - (EXTRACT('EPOCH', CAST({}  AS TIMESTAMP_TZ)) % (60*{})))))), 'YYYY-MM-DD HH24:MI')".format(baseName,baseName,hourValue)
+                            dimensionObj = Dimension()
+                            dimensionObj.setDimension(
+                                {
+                                    "name": name,
+                                    "sql" : sql,
+                                    "type": type
+                                }
+                                )
+                            print(dimensionObj)
         
+                        
+                        print('Time Frames Name-----------------'+name)
+
+
+                        dimension_ = Dimension()
+                        dimension_.setDimension(
+                            {
+                                "name": name,
+                                "sql" : sql,
+                                "type": type
+                            }
+                        )
+
+                        dimensionGroupList.append(dimension_)
+
+                        #print('Time Frames-----------------'+timeframesRow)
+                        #dimensiongroupObj = dimensiongroup()
+                        #dimensiongroupObj.setdimensiongroup(timeframesRow)
+
+
+
+        
+        for dimensionItem in dimensionGroupList:
+            dimensions_.append(dimensionItem)     
+
         allDimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
 
         validDimensions = []
@@ -203,6 +630,7 @@ class View:
 
         with open(fileName, 'r') as file:
             parsed = lkml.load(file)
+            print(parsed)
             #logging.info(parsed)
 
             for view in parsed['views']:

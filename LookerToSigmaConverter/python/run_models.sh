@@ -95,3 +95,14 @@ dbt run --models sigma_its_sig_events
 dbt run --models sigma_its_sig_events
 dbt run --models sigma_its_sig_events
 dbt run --models sigma_its_sig_events
+dbt run --models sigma_its_sig_events
+dbt run --models sigma_its_sig_events
+dbt run --models sigma_its_sig_events
+dbt run --models sigma_its_sig_inventory_items
+dbt run --models sigma_its_sig_inventory_items
+dbt run --models sigma_its_sig_inventory_items
+dbt run --models sigma_its_sig_inventory_items
+dbt run --models sigma_its_sig_inventory_items
+dbt run --models sigma_its_sig_inventory_items
+dbt run --models sigma_its_sig_inventory_items
+dbt run --models sigma_its_sig_inventory_items

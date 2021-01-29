@@ -87,7 +87,7 @@ def main():
             logging.info(viewFilesList)
             for viewFileItem in viewFilesList:
 
-                if viewFileItem['FileName'] != 'events.view.lkml':
+                if viewFileItem['FileName'] != 'inventory_items.view.lkml':
                     continue
 
                 viewFile = '{}{}'.format(viewFileItem["DirName"], viewFileItem["FileName"])
@@ -99,6 +99,7 @@ def main():
                 views = viewObj.getViewInfomationFromFile(viewFile)
 
                 for view in views:
+                    logging.info("Viewinfo")
                     logging.info(view)
                     
                     view.schemaName = model.connection.schemaName
