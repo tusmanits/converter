@@ -141,8 +141,8 @@ class View:
                                 )
                             print(dimensionObj)
                         elif timeframe == 'yesno':
-                            type = 'yesno'
-                            sql="{}".format(baseName)
+                            type = 'string'
+                            sql="CASE WHEN {} IS NOT NULL THEN 'YES' ELSE 'NO' END".format(baseName)
                             
                             dimensionObj = Dimension()
                             dimensionObj.setDimension(
@@ -537,6 +537,8 @@ class View:
 
             for match in rx.finditer(processedSQL):
                 group = match.group(1)
+                print("-------------------------------------")
+                print(group)
                 found = False
                 for keyword in keywords:
                     if keyword in group:
@@ -577,19 +579,24 @@ class View:
 
             processedSQL = re.sub(r'\s+',' ', processedSQL)
             
-            rx = re.compile(r'FROM\s+(\w+)', re.IGNORECASE)
+            rx = re.compile(r'(\w+\(*\w+\s+)FROM\s+(\w+)', re.IGNORECASE)
             substitued = []
             for match in rx.finditer(processedSQL):
-                group = match.group(1)
-                
-                if group not in substitued:
-                    itemStripped = group.strip()
-                    from_ = 'FROM {}'.format(group)
-                    schemaConcatenatedValue ='{}.{}'.format(self.schemaName, itemStripped)
-                    to_ = 'FROM {}'.format(schemaConcatenatedValue)
-                    processedSQL = re.sub(from_, to_, processedSQL, flags=re.I)
+                rxExtract = re.compile(r'EXTRACT', re.IGNORECASE)
+                group1 = match.group(1)
+                extractFound = rxExtract.search(group1)
+                if extractFound:
+                    print("Skipping Extract: {}".format(group1))
+                else:
+                    group = match.group(2)
+                    if group not in substitued:
+                        itemStripped = group.strip()
+                        from_ = 'FROM {}'.format(group)
+                        schemaConcatenatedValue ='{}.{}'.format(self.schemaName, itemStripped)
+                        to_ = 'FROM {}'.format(schemaConcatenatedValue)
+                        processedSQL = re.sub(from_, to_, processedSQL, flags=re.I)
 
-                    substitued.append(itemStripped)
+                        substitued.append(itemStripped)
 
             processedSQL = re.sub(r'\s+',' ', processedSQL)
 
