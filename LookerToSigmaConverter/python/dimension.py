@@ -50,7 +50,102 @@ class Dimension:
     def transformTableDimensions(self):
         if '${TABLE}.' in self.sql:
             self.sql = self.sql.replace('${TABLE}.', '') 
-    
+
+    def transformZipCodeDimension(self):
+        self.transformTableDimensions()
+   
+    def transformTierDimension(self, tiers ,style):
+        print('----------------------------------------------')
+        print('----------------------------------------------')
+        print(tiers)
+        print(style)
+        print(self.sql)
+        if tiers is not None:
+            difference=int(tiers[1])-int(tiers[0])
+            print(difference)
+            finalquery=''
+            i=00
+            for value in tiers:
+                print(value)
+                if style=='integer':
+                    diff_from_value=int(value)-int(difference)
+                    minus_one_value=int(value)-1
+                    if int(value)==0:
+                        query="CASE WHEN {}  < {} THEN 'Below {}'".format(self.sql,value,value)
+                        finalquery = '{} {}'.format(finalquery, query)
+                        #queryF=query
+                    if int(value)>0:
+                        query="WHEN {}  >= {} AND {}  < {} THEN '{} to {}'".format(self.sql,diff_from_value,self.sql,value,diff_from_value,minus_one_value)
+                        print(query)
+                        finalquery = '{} {}'.format(finalquery, query)
+                        #queryF=queryF
+                    print(value)
+                    
+                    
+                if style=='relational':
+                    diff_from_value=float(value)-float(difference)
+                    minus_one_value=float(value)
+                    if int(value)==0:
+                        query="CASE WHEN {}  < {} THEN '< {}'".format(self.sql,float(value),float(value))
+                        finalquery = '{} {}'.format(finalquery, query)
+                        #queryF=query
+                    if int(value)>0:
+                        query="WHEN {}  >= {} AND {}  < {} THEN '>={} and <{}'".format(self.sql,float(diff_from_value),self.sql,float(value),float(diff_from_value),float(minus_one_value))
+                        print(query)
+                        finalquery = '{} {}'.format(finalquery, query)
+                        #queryF=queryF
+                    print(value)
+
+                
+                if style=='classic':
+                    
+                    diff_from_value=float(value)-float(difference)
+                    minus_one_value=float(value)
+                    if int(value)==0:
+                        query="CASE WHEN {}  < {} THEN 'T{:02d} (-inf,{})'".format(self.sql,float(value),i,float(value))
+                        finalquery = '{} {}'.format(finalquery, query)
+                        #queryF=query
+                        print(query)
+                    if int(value)>0:
+                        query="WHEN {}  >= {} AND {}  < {} THEN 'T{:02d} [{},{})'".format(self.sql,float(diff_from_value),self.sql,float(value),i,float(diff_from_value),float(minus_one_value))
+                        print(query)
+                        finalquery = '{} {}'.format(finalquery, query)
+                        #queryF=queryF
+                    
+                    #print(i)
+                    print(value)
+
+                if style=='interval':
+                    
+                    diff_from_value=float(value)-float(difference)
+                    minus_one_value=float(value)
+                    if int(value)==0:
+                        query="CASE WHEN {}  < {} THEN '(-inf,{})'".format(self.sql,float(value),float(value))
+                        finalquery = '{} {}'.format(finalquery, query)
+                        #queryF=query
+                        print(query)
+                    if int(value)>0:
+                        query="WHEN {}  >= {} AND {}  < {} THEN '[{},{})'".format(self.sql,float(diff_from_value),self.sql,float(value),float(diff_from_value),float(minus_one_value))
+                        print(query)
+                        finalquery = '{} {}'.format(finalquery, query)
+
+                i=i+1
+            #queryF=queryF
+            if style == 'integer':
+                query="WHEN {}  >= {} THEN '{} or Above' ELSE 'Undefined' END".format(self.sql,value,value)
+                finalquery = '{} {}'.format(finalquery, query)
+            elif style == 'relational':
+                query="WHEN {}  >= {} THEN '>={}' ELSE 'Undefined' END".format(self.sql,float(value),float(value))
+                finalquery = '{} {}'.format(finalquery, query)
+            elif style == 'classic':
+                query="WHEN {}  >= {} THEN 'T{:02d} [{},inf)' ELSE 'TXX Undefined' END".format(self.sql,float(value),i,float(value))
+                finalquery = '{} {}'.format(finalquery, query)
+            elif style == 'interval':
+                query="WHEN {}  >= {} THEN '[{},inf)' ELSE 'Undefined' END".format(self.sql,float(value),float(value))
+                finalquery = '{} {}'.format(finalquery, query)
+        #print(str(finalquery))
+        print(finalquery)
+
     def setDimension(self, dimension):
 
         if 'name' in dimension:
@@ -78,6 +173,19 @@ class Dimension:
             self.sql = self.transformLocationDimension(sqlLongitude, sqlLatitude)
 
         self.transformTableDimensions()
+
+        if self.type == 'zipcode':
+            self.transformZipCodeDimension()
+        if self.type == 'tier':
+            tiers = None
+            if 'tiers' in dimension:
+                tiers = dimension['tiers']
+                style = dimension['style']
+                self.transformTierDimension(tiers,style)
+
+
+
+        
 
         if self.type == 'yesno':
             self.transformYesNoDiemension()
