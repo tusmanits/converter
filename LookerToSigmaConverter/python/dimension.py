@@ -54,6 +54,7 @@ class Dimension:
     def transformZipCodeDimension(self):
         self.transformTableDimensions()
    
+   
     def transformTierDimension(self, tiers ,style):
         print('----------------------------------------------')
         print('----------------------------------------------')
@@ -146,6 +147,73 @@ class Dimension:
         #print(str(finalquery))
         print(finalquery)
 
+
+    def duration_day(self, sql_start, sql_end):
+        sql_start=sql_start
+        sql_end=sql_end
+        #print("Duration Day Function"+sql_start+sql_end)
+        type = 'string'
+        query = "(TIMESTAMPDIFF(DAY, {} , {}) + CASE WHEN TIMESTAMPDIFF(SECOND, TO_DATE({}), {}) = TIMESTAMPDIFF(SECOND, TO_DATE({} ), {} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, TO_DATE({}), {}) < TIMESTAMPDIFF(SECOND, TO_DATE({} ), {} ) THEN CASE WHEN {}  < {} THEN -1 ELSE 0 END ELSE CASE WHEN {}  > {} THEN 1 ELSE 0 END END)".format(sql_start,sql_end,sql_end,sql_end,sql_start,sql_start,sql_end,sql_end,sql_start,sql_start,sql_start,sql_end,sql_start,sql_end)
+        print(query)
+        self.sql = query
+    def duration_hour(self, sql_start, sql_end):
+        sql_start=sql_start
+        sql_end=sql_end
+        #print("Duration Day Function"+sql_start+sql_end)
+        type = 'string'
+        query = "CASE WHEN TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / (60*60) < 0 THEN CEIL(TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / (60*60)) ELSE FLOOR(TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / (60*60)) END".format(created_at=sql_start,delivered_at=sql_end)
+        print(query)
+        self.sql = query
+    def duration_second(self, sql_start, sql_end):
+        sql_start=sql_start
+        sql_end=sql_end
+        #print("Duration Day Function"+sql_start+sql_end)
+        type = 'string'
+        query = "TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at})".format(created_at=sql_start,delivered_at=sql_end)
+        print(query)
+        self.sql = query
+    def duration_minute(self, sql_start, sql_end):
+        sql_start=sql_start
+        sql_end=sql_end
+        #print("Duration Day Function"+sql_start+sql_end)
+        type = 'string'
+        query = "CASE WHEN TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / 60 < 0 THEN CEIL(TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / 60) ELSE FLOOR(TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / 60) END".format(created_at=sql_start,delivered_at=sql_end)
+        print(query)
+        self.sql = query
+    def duration_month(self, sql_start, sql_end):
+        sql_start=sql_start
+        sql_end=sql_end
+        #print("Duration Day Function"+sql_start+sql_end)
+        type = 'string'
+        query = "(TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END)".format(created_at=sql_start,delivered_at=sql_end)
+        print(query)
+        self.sql = query
+    def duration_quarter(self, sql_start, sql_end):
+        sql_start=sql_start
+        sql_end=sql_end
+        #print("Duration Day Function"+sql_start+sql_end)
+        type = 'string'
+        query = "CASE WHEN (TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 3 < 0 THEN CEIL((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 3) ELSE FLOOR((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 3) END".format(created_at=sql_start,delivered_at=sql_end)
+        print(query)
+        self.sql = query
+    def duration_weeks(self, sql_start, sql_end):
+        sql_start=sql_start
+        sql_end=sql_end
+        #print("Duration Day Function"+sql_start+sql_end)
+        type = 'string'
+        query = "CASE WHEN (TIMESTAMPDIFF(DAY, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 7 < 0 THEN CEIL((TIMESTAMPDIFF(DAY, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 7) ELSE FLOOR((TIMESTAMPDIFF(DAY, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 7) END".format(created_at=sql_start,delivered_at=sql_end)
+        print(query)
+        self.sql = query
+    def duration_years(self, sql_start, sql_end):
+        sql_start=sql_start
+        sql_end=sql_end
+        #print("Duration Day Function"+sql_start+sql_end)
+        type = 'string'
+        query = "CASE WHEN (TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12 < 0 THEN CEIL((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12) ELSE FLOOR((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12) END".format(created_at=sql_start,delivered_at=sql_end)
+        print(query)
+        self.sql = query
+
+
     def setDimension(self, dimension):
 
         if 'name' in dimension:
@@ -171,6 +239,7 @@ class Dimension:
             if 'sql_longitude' in dimension:
                 sqlLongitude = dimension['sql_longitude']
             self.sql = self.transformLocationDimension(sqlLongitude, sqlLatitude)
+            
 
         self.transformTableDimensions()
 
@@ -183,12 +252,54 @@ class Dimension:
                 style = dimension['style']
                 self.transformTierDimension(tiers,style)
 
-
-
-        
-
         if self.type == 'yesno':
             self.transformYesNoDiemension()
+
+        if 'duration' in self.type:
+            print("Duration----------------------------------------------------------------------------------------"+self.type)
+            if 'day' in self.type:
+                sql_start = dimension['sql_start']
+                sql_end = dimension['sql_end']
+                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
+                self.duration_day(sql_start,sql_end)
+            elif 'hour' in self.type:
+                sql_start = dimension['sql_start']
+                sql_end = dimension['sql_end']
+                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
+                self.duration_hour(sql_start,sql_end)
+            elif 'minute' in self.type:
+                sql_start = dimension['sql_start']
+                sql_end = dimension['sql_end']
+                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
+                self.duration_minute(sql_start,sql_end)
+            elif 'month' in self.type:
+                sql_start = dimension['sql_start']
+                sql_end = dimension['sql_end']
+                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
+                self.duration_month(sql_start,sql_end)
+            elif 'quarter' in self.type:
+                sql_start = dimension['sql_start']
+                sql_end = dimension['sql_end']
+                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
+                self.duration_quarter(sql_start,sql_end)
+            elif 'week' in self.type:
+                sql_start = dimension['sql_start']
+                sql_end = dimension['sql_end']
+                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
+                self.duration_weeks(sql_start,sql_end)
+            elif 'year' in self.type:
+                sql_start = dimension['sql_start']
+                sql_end = dimension['sql_end']
+                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
+                self.duration_years(sql_start,sql_end)
+            elif 'second' in self.type:
+                sql_start = dimension['sql_start']
+                sql_end = dimension['sql_end']
+                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
+                self.duration_second(sql_start,sql_end)
+                
+
+                
 
         self.dependencies = self.getDependencies()
         
