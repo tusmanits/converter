@@ -167,3 +167,11 @@ dbt run --models sigma_its_sig_order_items
 dbt run --models sigma_its_sig_order_items
 dbt run --models sigma_its_sig_order_items
 dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_users
+dbt run --models sigma_its_sig_users
+dbt run --models sigma_its_sig_users
+dbt run --models sigma_its_sig_users
+dbt run --models sigma_its_sig_users
+dbt run --models sigma_its_sig_users
+dbt run --models sigma_its_sig_users
+dbt run --models sigma_its_sig_users

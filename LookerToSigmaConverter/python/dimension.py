@@ -15,6 +15,9 @@ class Dimension:
         self.dependenciesByPath = []
         self.isExcluded = False
         self.excludedReason = None
+        self.startLocationField = None
+        self.endLocationField = None
+        self.distanceUnits = None
 
     def setExcludedDimension(self):
         found = re.search(r'\$\{\s*\w+\s*\.\s*\w+\s*\}', self.sql)
@@ -212,7 +215,10 @@ class Dimension:
         query = "CASE WHEN (TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12 < 0 THEN CEIL((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12) ELSE FLOOR((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12) END".format(created_at=sql_start,delivered_at=sql_end)
         print(query)
         self.sql = query
-
+    def processDistanceDimension(self,units,startLocationField,endLocationField):
+        self.distanceUnits = units
+        self.startLocationField = startLocationField
+        self.endLocationField = endLocationField
 
     def setDimension(self, dimension):
 
@@ -297,12 +303,30 @@ class Dimension:
                 sql_end = dimension['sql_end']
                 #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_second(sql_start,sql_end)
-                
-
-                
-
+        if self.type=='distance':
+            print("-----------------------------------------------------------------"+self.type)
+            start_location_field=dimension['start_location_field']
+            end_location_field=dimension['end_location_field']
+            units=dimension['units']
+            print("units:"+units+",start_location_field:"+start_location_field+",end_location_field:"+end_location_field)
+            self.processDistanceDimension(units,start_location_field,end_location_field)
         self.dependencies = self.getDependencies()
-        
+    
+    def getProcessedDistanceDimensions(self, dimensions):
+        cleanedDimensions = dimensions
+        for i in range(len(dimensions)):
+            currentDimension = dimensions[i]
+            if currentDimension.type == 'distance':
+                name = currentDimension.name
+                startLocationField = currentDimension.startLocationField
+                endLocationField = currentDimension.endLocationField
+                print("{}:{}:{}".format(name, startLocationField, endLocationField))
+                startDim = currentDimension.getDimensionByName(startLocationField, dimensions)
+                endDim = currentDimension.getDimensionByName(endLocationField, dimensions)
+                print(startDim)
+                print(endDim)
+
+        return cleanedDimensions    
 
     def getIndex(self, dimensions):
         

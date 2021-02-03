@@ -259,6 +259,8 @@ class View:
         for dimensionItem in dimensionGroupList:
             dimensions_.append(dimensionItem)     
 
+        distanceDimensions = Dimension().getProcessedDistanceDimensions(dimensions_) 
+
         allDimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
 
         validDimensions = []
