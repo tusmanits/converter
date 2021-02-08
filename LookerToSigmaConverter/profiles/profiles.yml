@@ -1,0 +1,18 @@
+converter:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: itstrategists.east-us-2.azure
+
+      # User/password auth
+      user: TUSMAN
+      password: Sunny321!!
+
+      role: SYSADMIN
+      database: SIGMA_CONVERTER
+      warehouse: TAYYAB_WH
+      schema: DBT
+      threads: 1
+      client_session_keep_alive: False
+      query_tag: DBT 

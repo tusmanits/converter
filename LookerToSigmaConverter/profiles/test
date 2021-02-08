@@ -1,0 +1,1 @@
+dbt run --profiles-dir profiles --models sigma_its_sig_events
